@@ -1,0 +1,27 @@
+{
+  "name": "agenda",
+  "version": "0.0.1",
+  "description": "Site d'agenda virtuel",
+  "main": "",
+  "scripts": {
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\" "
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/docteur-turboss/Agenda.git"
+  },
+  "keywords": [
+    "website",
+    "mern",
+    "agenda"
+  ],
+  "author": "docteur-turboss",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/docteur-turboss/Agenda/issues"
+  },
+  "homepage": "https://github.com/docteur-turboss/Agenda#readme",
+  "devDependencies": {
+    "concurrently": "^8.0.1"
+  }
+}

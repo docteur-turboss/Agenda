@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+
+.btn{
+    background-color: #FB3F4E;
+    padding: 1vh 1vw;
+    text-decoration: none;
+    border-radius: 100px;
+    text-align: center;
+    border : none;
+    cursor: pointer;
+    color: white;
+}
+
+
+.link{
+    margin: 1vh 1vw;
+
+    text-decoration: none;
+    text-align: right;
+
+    border-bottom: 1px solid transparent;
+
+    transition: all 0.7s ease;
+}
+
+.form-complete{
+    border: none;
+    outline: none;
+    margin-left: 1vw ;
+    background-color: rgb(230, 230, 230);
+}
+
+::placeholder{
+    font-size: 1em;
+    font-weight: 100;
+    opacity: 0.5;
+
+}
+
+.form-complete:focus{
+    background-color: rgb(225, 225, 225);
+}
+
+.success{
+    background: rgba(130, 240, 130, 0.4);
+    color: rgba(10, 150, 10, 0.8);
+}
+
+.error{
+    background-color: rgba(240, 130, 130, 0.4);
+    color: rgba(150, 10, 10, 0.8);
+}
+
+.hidden{
+    opacity: 0;
+}
+
+.mess{
+    opacity: 1;
+
+    position: fixed;
+    top: calc(47px + 5em);
+    left: 20px;
+
+    width: fit-content;
+    max-width: 45vw;
+    padding: 1.5vh 2vw;
+
+    border-radius: 10px;
+    
+    z-index: 5;
+}
