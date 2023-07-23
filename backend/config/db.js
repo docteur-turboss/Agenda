@@ -68,6 +68,7 @@ const configs = {
 }
 
 const config = configs[process.env.NODE_ENV || 'development'];
+
 const db = knex(config);
 
 module.exports = db;

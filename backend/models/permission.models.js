@@ -85,9 +85,9 @@ class permission {
 
     /* normalise la data */
     static modelNormilizer = async (info = {User_ID, Organisation_ID, Permission}, obligatoire = false) =>{
-        if(obligatoire == true){
-            if(!info.User_ID || !info.Organisation_ID){
-                return [false, 406]
+        if(obligatoire == true || !info.Permission){
+            if(!info.User_ID || !info.Organisation_ID || !info.Permission){
+                return [false, 406, "Certaines informations fournit sont manquantes."]
             }
         }
         async function getDB(DBtable, params){
@@ -98,21 +98,25 @@ class permission {
             orgainfo = await orgainfo[0]
 
             if(orgainfo == undefined){
-                return [false, 404]
+                return [false, 404, "L'organisme fournit n'est pas trouvable."]
             }
         }
 
         if(info.User_ID){
-           getDB('user', info.User_ID) 
+           let user = getDB('user', info.User_ID) 
+           if(user[0] == false){
+                return user
+           }
         }
         
         if(info.Organisation_ID){
-            getDB('organisation', info.Organisation_ID)
+            let orgo = getDB('organisation', info.Organisation_ID)
+            
+            if(orgo[0] == false){
+                return orgo
+            }
         }
-
-        if(!info.Permission){
-            return [false, 406]
-        }
+        
 
         info = suppNotUsed(info)
 

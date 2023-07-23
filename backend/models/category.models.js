@@ -4,21 +4,24 @@ const db = require('../config/db')
 class category {
     /* créer une nouvelle category */
     static createCategory = async(orgaInformationToUp = {Name, color, Organisation_ID}) =>{
-        let info = await category.modelNormilizer(orgaInformationToUp, orgaInformationToUp.Organisation_ID, true)
+        let info = await category.modelNormilizer(orgaInformationToUp, {OrganisationID : orgaInformationToUp.Organisation_ID}, true)
 
         if(info[0] == false){
             return info
         }
 
-        await db("category_event").insert(info)
+        let IDCAT = await db("category_event").insert(info)
 
-        return true
+        return {
+            success: true,
+            id : IDCAT[0]
+        }
     }
 
     /*modification de l'organisation*/
-    static async updateCategory (orgaInformationToUp = {Name, color}, condition = {Organisation_ID}) {
+    static async updateCategory (orgaInformationToUp = {Name, color}, condition = {id, OrganisationID}) {
 
-        let info = await category.modelNormilizer(orgaInformationToUp, condition.Organisation_ID)
+        let info = await category.modelNormilizer(orgaInformationToUp, {id:condition.id, OrganisationID : condition.OrganisationID})
         
         if(info[0] == false){
             return info
@@ -26,7 +29,7 @@ class category {
 
         await db('category_event')
         .update(info)
-        .where(condition)
+        .where({id : condition.id})
         
         return true
     }
@@ -77,14 +80,17 @@ class category {
     }
 
     /* normalise la data */
-    static modelNormilizer = async (info = {Name, color}, Organisation_ID, obligatoire = false) =>{
-        if(((obligatoire == true) && (!info.Name || !info.color || !Organisation_ID)) || ((info.Name && ( info.Name.length < 2 || info.Name.length > 100)) || (info.color && info.color.length > 8))){
+    static modelNormilizer = async (info = {Name, color}, id = {id, OrganisationID}, obligatoire = false) =>{
+        if(((obligatoire == true) && (!info.Name || !info.color || !id.OrganisationID)) || ((info.Name && ( info.Name.length < 2 || info.Name.length > 100)) || (info.color && info.color.length > 8))){
+            console.log(info, id, obligatoire)
+            return [false, 406]
+        }else if(obligatoire == false && (!id.id || !id.OrganisationID)){
             return [false, 406]
         }
 
         let orgainfo = await db('organisation')
         .select("ID")
-        .where({ID : Organisation_ID})
+        .where({ID : id.OrganisationID})
 
         orgainfo = await orgainfo[0]
 

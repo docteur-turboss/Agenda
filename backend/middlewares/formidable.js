@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
 
   form.parse(req, (err, fields, files) => {
     if (err) {
-      return next({statut : false, errMess : err });
+      return next({status : false, errMess : err });
     }
     
     req.fields = fields;

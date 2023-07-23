@@ -15,6 +15,7 @@ class task_organisation {
         .where({ID : taskObj.category_event_ID})
 
         if(category_event[0] == undefined){
+            console.log(6)
             return [false, 401]
         }
 
@@ -23,13 +24,17 @@ class task_organisation {
         .where({ID : taskObj.Organisation_ID})
 
         if(Organisation[0] == undefined){
+            console.log(7)
             return [false, 401]
         }
 
 
-        await db("task_event").insert(taskObj)
+        let IDTASK = await db("task_event").insert(taskObj, ['id'])
 
-        return true
+        return {
+            success : true,
+            id : IDTASK[0]
+        }
     }
 
     /*modification de la task de l'orga*/
@@ -46,6 +51,7 @@ class task_organisation {
         .where({ID : taskObj.category_event_ID})
 
         if(category_event[0] == undefined){
+            console.log(8)
             return [false, 401]
         }
 

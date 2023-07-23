@@ -4,7 +4,8 @@
   "description": "",
   "main": "",
   "scripts": {
-    "dev": "node index"
+    "dev": "nodemon index",
+    "start": "node index"
   },
   "keywords": [],
   "author": "docteur-turboss",
@@ -20,5 +21,8 @@
     "knex": "^2.4.2",
     "mysql2": "^3.3.5",
     "nodemailer": "^6.9.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }

@@ -1,5 +1,6 @@
 const permission = require('./permission.models')
 const db = require('../config/db')
+const suppNotUsed = require('../utils/deleteParamsNotUsed')
 
 
 class Organisation {
@@ -13,8 +14,8 @@ class Organisation {
         }
 
         let IDOrga = await db("organisation").insert({
-            Nom : orgaInformationToUp.Nom,
-            Type : orgaInformationToUp.Type
+            Nom : info.Nom,
+            type : info.Type
         }, ["ID"])
 
         let firstPerm = await permission.createPerm({Organisation_ID : IDOrga[0], Permission : "manager", User_ID: orgaInformationToUp.idOwner})
@@ -23,7 +24,10 @@ class Organisation {
             return firstPerm
         }
 
-        return true
+        return {
+            success : true,
+            id : IDOrga[0]
+        }
     }
 
     /*modification de l'organisation*/
@@ -34,6 +38,7 @@ class Organisation {
         if(info[0] == false){
             return info
         }
+        
         await db('organisation')
         .update(info)
         .where(condition)
@@ -83,23 +88,22 @@ class Organisation {
 
     /* normalise la data */
     static modelNormilizer = async (info = {Nom, Type : 0}, obligatoire = false) =>{
-        if((obligatoire == true && (!info.Nom)) || (info.Nom && (info.Nom.length < 3 || info.Nom.length > 99)) || (info.Type && (info.Type <  0 || info.Type >= 2))){
-            return [false, 406]
+        if(obligatoire == true && !info.Nom){
+            return [false, 406, "Certaines information fournit sont manquantes."]
+        }
+
+        if(info.Nom && ( 100 < info.Nom.length && info.Nom.length < 3)){
+            return [false, 406, "Le nom est suppérieur à 100 ou inférieur à 3."]
+        }
+
+        if(info.Type && (info.Type < 0 || info.Type > 1)){
+            return [false, 406, "Merci d'éviter ce genre de manipulation. C'est soit agenda, soit projet, pas xyz."]
         }
 
         info = suppNotUsed(info)
 
         return info
     }
-}
-
-function suppNotUsed(prop) {
-    for (const property in prop) {
-      if (!prop[property]) {
-        delete prop[property]
-      }
-    }
-    return prop
 }
 
 module.exports = Organisation;

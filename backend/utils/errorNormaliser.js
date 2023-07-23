@@ -1,7 +1,11 @@
 
-const normaliserError = (errorCode) =>{
-    let objresp = {statut : false, errCode : errorCode, errMess : ''};
+const normaliserError = (errorCode, reason) =>{
+    let objresp = {status : false, errCode : errorCode, errMess : ''};
     
+    if(reason){
+      objresp.reason = reason
+    }
+
     switch (errorCode) {
         case 400:
           objresp.errMess = "BAD REQUEST"
@@ -22,7 +26,8 @@ const normaliserError = (errorCode) =>{
           objresp.errMess = "NOT ACCEPTABLE"
           break;
         case 500:
-          objresp.errMess = "INTERNAL SERVER ERROR"
+          objresp.errMess = "INTERNAL SERVER ERROR",
+          objresp.reason = "Une erreur interne est survenue."
           break;
     }
     return objresp
