@@ -1,22 +1,24 @@
-const normaliserError = require("./errorNormaliser");
+const modelsError = require('../models/error.models')
 
-module.exports = (validAuth = {token, CookieSecure}, statusCode, res) => { 
+module.exports = (validAuth = {token, CookieSecure}, statusCode, res, next) => { 
     // à refaire
     try{
         /* options for cookie */
         const options = {
+            signed: true,
             httpOnly: true,
-            secure : true
+            secure: true,
+            sameSite: true
         };
 
         /* on crée le cookie du confirm */
-        res.status(statusCode).cookie('secureCookie', validAuth.CookieSecure, options)
+        res.cookie('auth', validAuth.CookieSecure, options)
 
         /* on crée le confirm auth */
         res.status(statusCode).json({
             token : validAuth.token
         })
     }catch(err){
-        res.status(500).json(normaliserError(500))
+        next(new modelsError.ErrorException())
     }
 };

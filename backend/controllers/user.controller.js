@@ -1,27 +1,29 @@
 const suppNotUsed = require("../utils/deleteParamsNotUsed");
 let catchErr = require("../middlewares/catchAsyncErrors");
-let errorNormaliser = require("../utils/errorNormaliser");
 let User = require("../models/user.models");
 let sendToken = require("../utils/token");
 let sendEmail = require("../utils/email");
+const { scryptSync } = require("crypto");
+const { hashSync } = require("bcryptjs");
 let fs = require("fs");
+
 
 /*Enregistre l'user*/
 module.exports.signup = catchErr(async (req, res, next) => {
   let NewUser = await User.createUser({
     Pseudo: req.fields.pseudo,
     Email: req.fields.email,
-    password: req.fields.password
+    password: hashSync(scryptSync(req.fields.password, 'BonsourCetaitUnTest,RetireEnProdSTP.', 24, { N: 1024 }).toString('hex'), 10)
   });
 
-  if (NewUser[0] == false) {
-    return res.status(NewUser[1]).json(errorNormaliser(NewUser[1], NewUser[2]));
+  if (NewUser.success == false) {
+    throw new Error()
   }
 
   let CookieSecure = await User.createSecurityAuth(NewUser);
 
-  if(CookieSecure[0] == false){
-    return res.status(CookieSecure[1].json(errorNormaliser(CookieSecure[1], CookieSecure[2])))
+  if(CookieSecure.success == false){
+    return res.status(CookieSecure.status).json(errorNormaliser(CookieSecure.status, CookieSecure.message))
   }
 
   return sendToken(
@@ -68,7 +70,7 @@ module.exports.updateProfile = catchErr(async (req, res, next_) => {
   let updateUsed = {
     Email : req.fields.email,
     Pseudo : req.fields.pseudo,
-    password : req.fields.password
+    password: hashSync(scryptSync(req.fields.password, 'BonsourCetaitUnTest,RetireEnProdSTP.', 24, { N: 1024 }).toString('hex'), 10)
   };
 
   updateUsed = suppNotUsed(updateUsed)
@@ -105,8 +107,8 @@ module.exports.login = catchErr(async (req, res, next) => {
 
   let informationPass = await User.comparePassword(
     req.fields.email,
-    req.fields.password
-  );
+    scryptSync(req.fields.password, 'BonsourCetaitUnTest,RetireEnProdSTP.', 24, { N: 1024 }).toString('hex')
+    );
 
   if (informationPass[0] == false) {
     return res.status(informationPass[1]).json(errorNormaliser(informationPass[1], informationPass[2]));

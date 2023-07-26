@@ -1,7 +1,6 @@
 const task_organisation = require("../models/taskEvent.models");
 let catchErr = require("../middlewares/catchAsyncErrors");
 let categoryModel = require("../models/category.models");
-let normaliseErr = require("../utils/errorNormaliser");
 
 module.exports.CreateCategory = catchErr(async (req, res, next) => {
   let catInfo = await categoryModel.createCategory({

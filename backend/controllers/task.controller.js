@@ -1,5 +1,4 @@
 let catchErr = require("../middlewares/catchAsyncErrors");
-let normaliseErr = require("../utils/errorNormaliser");
 let taskModel = require("../models/taskEvent.models");
 
 module.exports.getTask = catchErr(async (req, res, next) => {
@@ -34,7 +33,7 @@ module.exports.CreateTask = catchErr(async (req, res, next) => {
     Organisation_ID: req.fields.OrganisationID,
     desc: req.fields.desc,
     Datetime: req.fields.Datetime,
-    Where: req.fields.Where,
+    OuCa: req.fields.OuCa,
   });
 
   if (taskCreate[0] == false) {
@@ -55,7 +54,7 @@ module.exports.UpdateTask = catchErr(async (req, res, next) => {
       category_event_ID: req.fields.category_event_ID,
       desc: req.fields.desc,
       Datetime: req.fields.Datetime,
-      Where: req.fields.Where,
+      OuCa: req.fields.OuCa,
     },
     { ID: req.fields.ID_Task }
   );

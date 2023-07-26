@@ -1,5 +1,4 @@
 const permission = require('../models/permission.models');
-let normaliseErr = require('../utils/errorNormaliser');
 let UserModel = require('../models/user.models');
 
 module.exports.isAuthenticatedUser = async(req, res, next) =>{

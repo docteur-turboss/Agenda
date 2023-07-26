@@ -1,0 +1,46 @@
+.article{
+    display: flex;
+    justify-content: right;
+    align-items: center;
+
+    text-align: right;
+
+    height: 50vh;
+    width: 100%;
+
+    padding-right: 20vw ;
+    padding-left: 10vw;
+
+    border-top: 1px solid #87ceeb;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+
+    align-items: flex-end;
+    justify-content: center;
+
+    margin:0 2vw;
+    width: 60%;
+}
+
+.desc{
+    color: #666;
+
+}
+
+.titre{
+    color: #222;
+}
+
+.imgArticle{
+    max-height: 35vh;
+    width: 20vw;
+}
+
+.reverse{
+    justify-content: left;
+    flex-direction: row-reverse;
+    text-align: right;
+}

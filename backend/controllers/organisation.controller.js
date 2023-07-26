@@ -1,7 +1,6 @@
 const task_organisation = require("../models/taskEvent.models");
 const permission = require("../models/permission.models");
 let catchErr = require("../middlewares/catchAsyncErrors");
-let normaliseErr = require("../utils/errorNormaliser");
 let agenda = require("../models/organisation.models");
 const category = require("../models/category.models");
 let fs = require("fs");

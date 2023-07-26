@@ -1,11 +1,12 @@
 {
   "name": "backend_agenda",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "",
   "main": "",
   "scripts": {
     "dev": "nodemon index",
-    "start": "node index"
+    "start": "node index",
+    "createDB" : "node ./config/createDB.js"
   },
   "keywords": [],
   "author": "docteur-turboss",

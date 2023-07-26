@@ -1,5 +1,4 @@
 let catchErr = require("../middlewares/catchAsyncErrors");
-let normaliseErr = require("../utils/errorNormaliser");
 let permModel = require("../models/permission.models");
 
 module.exports.CreatePerm = catchErr(async (req, res, next) => {

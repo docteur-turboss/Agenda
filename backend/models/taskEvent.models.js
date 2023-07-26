@@ -3,7 +3,7 @@ const db = require('../config/db')
 class task_organisation {
 
     /* créer une nouvelle task */
-    static createTask = async(orgaInformationToUp = {name : "", etat, category_event_ID, Organisation_ID, desc, Datetime, Where}) =>{
+    static createTask = async(orgaInformationToUp = {name : "", etat, category_event_ID, Organisation_ID, desc, Datetime, OuCa}) =>{
         let taskObj = await task_organisation.modelNormilizer(orgaInformationToUp, true)
         
         if(taskObj[0] == false){
@@ -38,7 +38,7 @@ class task_organisation {
     }
 
     /*modification de la task de l'orga*/
-    static async updateTask (orgaInformationToUp = {name : "", etat : 0, category_event_ID, desc, Datetime, Where}, condition = {ID}) {
+    static async updateTask (orgaInformationToUp = {name : "", etat : 0, category_event_ID, desc, Datetime, OuCa}, condition = {ID}) {
 
         let taskObj = await task_organisation.modelNormilizer(orgaInformationToUp)
 
@@ -110,14 +110,14 @@ class task_organisation {
     }
 
     /* normalise la data */
-    static modelNormilizer = async (info = {name : "", etat : 0, category_event_ID, Organisation_ID, desc, Datetime, Where}, obligatoire = false) =>{
+    static modelNormilizer = async (info = {name : "", etat : 0, category_event_ID, Organisation_ID, desc, Datetime, OuCa}, obligatoire = false) =>{
         if(
             (obligatoire == true && 
                 (info.name == "" || !info.category_event_ID || !info.Organisation_ID) || (info.etat < 0 && info.etat >= 2)
             ) || (
                 (info.name && (info.name.length < 4 || info.name.length > 50)) || 
                 (info.desc && info.desc.length > 150) || 
-                (info.Where && info.Where.length > 250) ||
+                (info.OuCa && info.OuCa.length > 250) ||
                 (info.Datetime && (isNaN(parseInt(info.Datetime))))
             )
         ){

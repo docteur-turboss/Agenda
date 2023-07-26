@@ -9,7 +9,7 @@ const configs = {
       port: process.env.PORTDB,
       user : process.env.USERDB,
       password: process.env.PASSWORDDB,
-      database : process.env.Database,
+      database : process.env.DATABASE,
     },
     pool : {min : 0, max: 7},
     log: {
@@ -30,7 +30,7 @@ const configs = {
       port: process.env.PORTDB,
       user : process.env.USERDB,
       password: process.env.PASSWORDDB,
-      database : process.env.Database,
+      database : process.env.DATABASE,
     },
     pool : {min : 0, max: 7},
     log: {
@@ -51,7 +51,7 @@ const configs = {
       port: process.env.PORTDB,
       user : process.env.USERDB,
       password: process.env.PASSWORDDB,
-      database : process.env.Database,
+      database : process.env.DATABASE,
     },
     pool : {min : 0, max: 7},
     log: {

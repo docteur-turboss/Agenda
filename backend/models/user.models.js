@@ -1,7 +1,7 @@
 const suppNotUsed = require('../utils/deleteParamsNotUsed');
 const {hashSync, compare} = require("bcryptjs")
 const validator = require("email-validator")
-const {createHash} = require("crypto")
+const {scryptSync} = require("crypto")
 const db = require("../config/db")
 
 class User {
@@ -119,13 +119,15 @@ class User {
 
     let Completetoken = firstParToken + 
     secondParToken + 
-    Buffer.from(`${hashSync(createHash("sha256").update(role).digest("hex"),10) }`, "utf-8").toString("base64url");
+    Buffer.from(`${hashSync(scryptSync(role, 'BonsourCetaitUnTest,RetireEnProdSTP.', 24, { N: 1024 }).toString('hex'),10) }`, "utf-8")
+    .toString("base64url");
 
-    let cookieSecure = Buffer.from(`${hashSync(createHash("sha256").update(`${
+    
+    let cookieSecure = Buffer.from(`${hashSync(scryptSync(`${
       firstParToken + 
       secondParToken + 
       Buffer.from(`${Completetoken}`, "utf-8").toString("base64url")
-    }`).digest("hex"), 10)}`, "utf-8").toString("base64url")
+    }`, 'BonsourCetaitUnTest,RetireEnProdSTP.', 24, { N: 1024 }).toString('hex'), 10)}`, "utf-8").toString("base64url")
     
     await db("user")
     .update({ 
@@ -156,8 +158,8 @@ class User {
     if(!result){
       return [false, 401, "Email ou Mot de passe invalide."]
     }
-
-    if(await compare(createHash("sha256").update(password).digest("hex"), result.password) == true){
+    
+    if(await compare(password, result.password) == true){
       return {
         status : 200,
         data : {token : result.token, CookieSecure : result.CookieSecure}
@@ -171,12 +173,8 @@ class User {
   static async modelNormilizer(Userobj = {Pseudo : undefined, Email : undefined, password : undefined, Type : undefined, join_date : undefined}, obligatoir = false){
 
     if(obligatoir){
-      if(!Userobj.join_date){
-        Userobj.join_date = new Date()
-        Userobj.Type = "simpleUser"
-      }
       if(!Userobj.Pseudo || !Userobj.password || !Userobj.Email){
-        return [false, 406, "No pseudo or password or email provided."]
+        return [false, 406, "Certaines informations obligatoires sont manquantes."]
       }
     }
 
@@ -189,41 +187,23 @@ class User {
         break;
       case "adminUser":
         break;
-      case "premiumUser":
-        break;
-      case "analystUser" :
-        break;
-      case undefined : 
-        if(obligatoir == true){
-          return [false, 500, "Une erreur interne est survenu."]
-        }
-        else{
-          break;
-        }
       default : 
-        return [false, 500, "Une erreur interne est survenu."]
+        if(obligatoir == true){
+          return [false, 406, "Le type d'utilisateur n'est pas valide"]
+        }
+        break;
     }
 
     if(Userobj.Email){
-      Userobj.Email = await Userobj.Email.toLowerCase()
-      if(!validator.validate(Userobj.Email)){
-        return [false, 406, "Votre email est invalide."]
-      }
+      Userobj.Email = Userobj.Email.toLowerCase()
+      if(!validator.validate(Userobj.Email)) return [false, 406, "Votre email est invalide."];
 
       let userInfo = await User.selectUser({Email : Userobj.Email})
 
-      if(userInfo[0] !== false){
-        return [false, 403, "L'email fourni est déjà prit."]
-      }
+      if(userInfo[0] !== false) return [false, 403, "L'email fourni est déjà existant."];
     }
 
-    if(Userobj.password){
-      Userobj.password = hashSync(createHash("sha256").update(Userobj.password).digest("hex"), 10)
-    }
-
-    Userobj = suppNotUsed(Userobj)
-
-    return Userobj
+    return suppNotUsed(Userobj)
   }
 }
 
