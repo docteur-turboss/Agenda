@@ -1,230 +1,333 @@
-const suppNotUsed = require('../utils/deleteParamsNotUsed');
-const {hashSync, compare} = require("bcryptjs")
-const validator = require("email-validator")
-const {createHash} = require("crypto")
-const db = require("../config/db")
+const { errorCode } = require("./error.models");
+const suppNotUsed = require("../utils/deleteParamsNotUsed");
+const db = require("../config/db");
+const getDB = require('../utils/VerifTable')
+const { hashSync, compare } = require("bcryptjs");
+const validator = require("email-validator");
+const { scryptSync } = require("crypto");
 
-class User {
-  /*Création d'un nouvel user*/
-  static async createUser(ModelsNormailise={Pseudo, Email, password, Type : "simpleUser", join_date : new Date()}){
-    let userObj = await User.modelNormilizer(ModelsNormailise, true)
-
-    if(userObj[0] == false){
-      /* Return un array de 3 paramètre d'err. */
-      return userObj
+module.exports = class User {
+  static async createUser(
+    ModelsNormailise = {
+      Pseudo,
+      Email,
+      password
     }
-
-    let userID = await db("user").insert(userObj, ["ID"])
-    userID = userID[0]
-
-    if(userID == undefined){
-      return [false, 500]
-    }
-
-    return {
-      status: 201,
-      data : userID
-    }
- }
-
-
-  /*modification de l'user*/
-  static async updateUser (UserInformationToUp = {Pseudo, Email, password, Type}, condition = {ID, Email}) {
-    condition = suppNotUsed(condition)
-    let ObjUser = await User.modelNormilizer(UserInformationToUp)
-
-    if(ObjUser[0] == false){
-      /* Return un array de 3 paramètre d'err. */
-      return ObjUser
-    }
-    let UpdUser = await db("user")
-    .update(ObjUser, ["ID"])
-    .where(condition)
+  ) {
     
-    if(UpdUser[0] === undefined){
-      return [false, 500]
-    }
+    try {
+      let userObj = await User.modelNormilizer(ModelsNormailise, true);
+      if (userObj.success == false) return userObj;
 
-    return {
-     status: 202,
-     data: "Utilisateur bien modifié." 
+      let userID = await db("user").insert(userObj, ["ID"]);
+
+      return {
+        success: true,
+        data: {
+          id: userID[0],
+          commentaire: "Utilisateur bien crée",
+        },
+      };
+    } catch (err) {
+      console.log("CREATE USER (backend/models/user.models.js) HAS ERROR : ");
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
     }
   }
 
-  /*détruction de l'user*/
-  static async destroyUser (condition ={ID, Email}){
-    condition = suppNotUsed(condition)
+  static async updateUser(
+    UserInformationToUp = { Pseudo, Email, password, Type },
+    condition = { ID, Email }
+  ) {
+    try {
+      condition = suppNotUsed(condition);
 
-    if(!condition.ID && !(condition.Email && validator.validate(condition.Email))){
-      return [false, 406, "L'email fourni n'est pas valide."]    
+      let ObjUser = await User.modelNormilizer(UserInformationToUp);
+      if (ObjUser.success == false) return ObjUser;
+
+      let userId = await db("user").update(ObjUser, ["ID"]).where(condition);
+
+      return {
+        success: true,
+        data: {
+          id: userId[0],
+          commentaire: "Utilisateur bien modifié.",
+        },
+      };
+    } catch (err) {
+      console.log("UPDATE USER (backend/models/user.models.js) HAS ERROR :");
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
     }
-
-    let Ise = await User.selectUser(condition)
-    if(Ise[0] == false){
-      /* Return un array de 3 paramètre d'err. */
-      return Ise
-    }
-
-    let UsReturn = await db("user")
-    .where(condition)
-    .del( ["ID"] )
-
-    if(UsReturn[0] === undefined){
-      return [false, 500]
-    }
-
-    return {
-      status: 200,
-      data: "Utilisateur bien détruit." 
-     }
   }
 
-  /* sélection d'un ou plusieurs user*/
-  static async selectUser (condition = {ID : undefined, Email : undefined}){
-    if(condition.Email && validator.validate(condition.Email) === false){
-      return [false, 406, "L'email fournit n'est pas valide."]
+  static async destroyUser(condition = { ID, Email }) {
+    try {
+      condition = suppNotUsed(condition);
+
+      if (Object.keys(condition).length && validator.validate(condition.Email)
+      )
+        return {
+          success: false,
+          reason: "Certaines informations obligatoires sont manquantes.",
+          code: errorCode.NotAcceptable,
+        };
+
+      let userSelect = await User.selectUser(condition);
+      if (userSelect.success == false) return Ise;
+
+      let userId = await db("user").where(condition).del(["ID"]);
+
+      return {
+        success: true,
+        data: {
+          id : userId[0],
+          commentaire : "Utilisateur bien détruit."
+        },
+      };
+    } catch (err) {
+      console.log("DESTROY USER (backend/models/user.models.js) HAS ERROR :");
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
     }
+  }
 
-    condition = suppNotUsed(condition)
+  static async selectUser(condition = { ID: undefined, Email: undefined }) {
+    try {
+      condition = suppNotUsed(condition);
 
-    let userinfo = await db("user")
-    .select("ID","Pseudo", "join_date", "Type", "token", "CookieSecure")
-    .where(condition)
+      let userInfo = await db("user")
+        .select(
+          "*"
+        )
+        .where(condition);
+      
+      if (userInfo[0] == undefined)
+        return {
+          success: false,
+          reason: "Utilisateur introuvable.",
+          code: errorCode.NotFound,
+        };
+      
+      for(let i = 0; i < userInfo.length; i++){
+        delete userInfo[i].password
+      }
 
-    if(userinfo[0] == undefined){
-      return [false, 404, "Utilisateur introuvable."]
-    }
-    
-    return {
-      status: 200,
-      data : userinfo
+      return {
+        success: true,
+        data: {
+          user : userInfo
+        },
+      };
+    } catch (err) {
+      console.log("SELECT USER (backend/models/user.models.js) HAS ERROR : ");
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
     }
   }
 
   /* algorithm de création du cookie de sécurité et du token*/
-  static async createSecurityAuth (idUser) {
-    if(idUser === undefined){
-      return [false, 406, "No id provided."]
-    }
-    let user = await User.selectUser({ID : idUser})
+  static async createSecurityAuth(idUser) {
+    try {
+      if (idUser === undefined)
+        return {
+          success: false,
+          reason: "Aucun id donnée.",
+          code: errorCode.NotAcceptable,
+        };
 
-    if(user[0] == false){
-      return user
-    }
-    
-    let role = user.data[0].Type
-    
-    let firstParToken = Buffer.from(`${idUser}`, "utf-8").toString("base64url") + ".";
-    let secondParToken = Buffer.from(`${Date.now() - new Date(2022, 2, 27, 18).getTime()}`, "utf-8").toString("base64url") + ".";
+      let user = await User.selectUser({ ID: idUser });
+      if (user.success == false) return user;
 
-    let Completetoken = firstParToken + 
-    secondParToken + 
-    Buffer.from(`${hashSync(createHash("sha256").update(role).digest("hex"),10) }`, "utf-8").toString("base64url");
+      let role = user.data.user[0].Type;
 
-    let cookieSecure = Buffer.from(`${hashSync(createHash("sha256").update(`${
-      firstParToken + 
-      secondParToken + 
-      Buffer.from(`${Completetoken}`, "utf-8").toString("base64url")
-    }`).digest("hex"), 10)}`, "utf-8").toString("base64url")
-    
-    await db("user")
-    .update({ 
-      token : Completetoken,
-      CookieSecure : cookieSecure
-    })
-    .where({ID : idUser})
+      let firstParToken =
+        Buffer.from(`${idUser}`, "utf-8").toString("base64url") + ".";
+      let secondParToken =
+        Buffer.from(
+          `${Date.now() - new Date(2022, 2, 27, 18).getTime()}`,
+          "utf-8"
+        ).toString("base64url") + ".";
+      let endToken = Buffer.from(
+        `${hashSync(
+          scryptSync(role, "BonsourCetaitUnTest,RetireEnProdSTP.", 24, {
+            N: 1024,
+          }).toString("hex"),
+          10
+        )}`,
+        "utf-8"
+      ).toString("base64url");
+      let Completetoken = firstParToken + secondParToken + endToken;
+      let CompleteCookie = Buffer.from(
+        `${hashSync(
+          scryptSync(
+            `${
+              firstParToken +
+              secondParToken +
+              Buffer.from(`${Completetoken}`, "utf-8").toString("base64url")
+            }`,
+            "BonsourCetaitUnTest,RetireEnProdSTP.",
+            24,
+            { N: 1024 }
+          ).toString("hex"),
+          10
+        )}`,
+        "utf-8"
+      ).toString("base64url");
 
-    return {
-      status : 200,
-      data : {token : Completetoken, cookieSecure : cookieSecure}
-    }
-  }
+      await db("user")
+        .update(
+          {
+            token: Completetoken,
+            CookieSecure: CompleteCookie,
+          },
+          ["ID"]
+        )
+        .where({ ID: idUser });
 
-  /*essaie de voir une corrélation entre les mot de passe*/
-  static async comparePassword(email, password) {
-    if(!email || !password){
-      return [false, 401, "Email ou Mot de passe invalide."]
-    }
-
-    let result = await db("user")
-    .select("password", "token", "CookieSecure")
-    .where({
-      Email : email
-    })
-    result = result[0]
-
-    if(!result){
-      return [false, 401, "Email ou Mot de passe invalide."]
-    }
-
-    if(await compare(createHash("sha256").update(password).digest("hex"), result.password) == true){
       return {
-        status : 200,
-        data : {token : result.token, CookieSecure : result.CookieSecure}
-      }
-    }
+        success: true,
+        data: { 
+          token: Completetoken, 
+          cookieSecure: CompleteCookie 
+        },
+      };
+    } catch (err) {
+      console.log(
+        "CREATE SECURITY AUTH (backend/models/user.models.js) HAS ERROR :"
+      );
+      console.log(err);
 
-    return [false, 401, "Email ou Mot de passe invalide."]
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
   }
 
-  /*normaliser la donnée*/
-  static async modelNormilizer(Userobj = {Pseudo : undefined, Email : undefined, password : undefined, Type : undefined, join_date : undefined}, obligatoir = false){
+  static async comparePassword(email, password) {
+    try {
+      if (!email || !password)
+        return {
+          success: false,
+          reason: "Email ou Mot de passe invalide.",
+          code: errorCode.Unauthenticated,
+        };
 
+      let result = await db("user")
+        .select("password", "token", "CookieSecure")
+        .where({
+          Email: email,
+        });
+
+      if (!result[0])
+        return {
+          success: false,
+          reason: "Email ou Mot de passe invalide.",
+          code: errorCode.Unauthenticated,
+        };
+
+      if ((await compare(password, result[0].password)) == true)
+        return {
+          success: true,
+          data: {
+            auth : {
+              token: result[0].token,
+              CookieSecure: result[0].CookieSecure,
+            },
+            commentaire : "Utilisateur bien connecté."
+          },
+        };
+
+      return {
+        success: false,
+        reason: "Email ou Mot de passe invalide.",
+        code: errorCode.Unauthenticated,
+      };
+    } catch (err) {
+      console.log(
+        "COMPARE PASSWORD (backend/models/user.models.js) HAS ERROR :"
+      );
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  }
+
+  static  modelNormilizer = async ( Userobj = { Pseudo, Email, password, Type, join_date },obligatoir = false) => {
+    if (obligatoir && (!Userobj.Pseudo || !Userobj.password || !Userobj.Pseudo))
+      return {
+        success: false,
+        reason: "Certaines informations obligatoires sont manquantes.",
+        code: errorCode.NotAcceptable,
+      };
     if(obligatoir){
-      if(!Userobj.join_date){
-        Userobj.join_date = new Date()
-        Userobj.Type = "simpleUser"
-      }
-      if(!Userobj.Pseudo || !Userobj.password || !Userobj.Email){
-        return [false, 406, "No pseudo or password or email provided."]
-      }
+      Userobj = {...Userobj, ...{Type :  "simpleUser", join_date: new Date()}}
     }
 
-    if(Userobj.Pseudo && (Userobj.Pseudo.length < 3 || Userobj.Pseudo.length > 50)){
-      return [false, 406, "Le pseudo fait plus de 50 caractère ou moins de 3."]
-    }
+    if (
+      Userobj.Pseudo &&
+      (Userobj.Pseudo.length < 3 || Userobj.Pseudo.length > 50)
+    )
+      return {
+        success: false,
+        code: errorCode.NotAcceptable,
+        reason: "Le pseudo ne doit pas faire plus de 50 caractère ou moins de 3.",
+      };
 
-    switch(Userobj.Type){
+    switch (Userobj.Type) {
       case "simpleUser":
         break;
       case "adminUser":
         break;
-      case "premiumUser":
+      default:
+        if(obligatoir === true)
+        return {
+            success: false,
+            code: errorCode.NotAcceptable,
+            reason: "Le type d'utilisateur est invalide.",
+          };
+          
         break;
-      case "analystUser" :
-        break;
-      case undefined : 
-        if(obligatoir == true){
-          return [false, 500, "Une erreur interne est survenu."]
-        }
-        else{
-          break;
-        }
-      default : 
-        return [false, 500, "Une erreur interne est survenu."]
     }
 
-    if(Userobj.Email){
-      Userobj.Email = await Userobj.Email.toLowerCase()
-      if(!validator.validate(Userobj.Email)){
-        return [false, 406, "Votre email est invalide."]
-      }
+    if (Userobj.Email) {
+      if (!validator.validate(Userobj.Email.toLowerCase()))
+        return {
+          success: false,
+          reason: "Votre email est invalide.",
+          code: errorCode.NotAcceptable,
+        };
 
-      let userInfo = await User.selectUser({Email : Userobj.Email})
-
-      if(userInfo[0] !== false){
-        return [false, 403, "L'email fourni est déjà prit."]
-      }
+      let userInfo = await User.selectUser({
+        Email: Userobj.Email.toLowerCase(),
+      });
+      if (userInfo.success !== false)
+        return {
+          success: false,
+          reason: "Email déjà utilisé.",
+          code: errorCode.NotAcceptable,
+        };
     }
-
-    if(Userobj.password){
-      Userobj.password = hashSync(createHash("sha256").update(Userobj.password).digest("hex"), 10)
-    }
-
-    Userobj = suppNotUsed(Userobj)
-
-    return Userobj
+    return suppNotUsed(Userobj);
   }
-}
-
-module.exports = User
+};

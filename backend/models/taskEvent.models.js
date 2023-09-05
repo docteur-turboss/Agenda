@@ -1,145 +1,214 @@
-const db = require('../config/db')
+const { errorCode } = require("./error.models");
+const suppNotUsed = require("../utils/deleteParamsNotUsed");
+const db = require("../config/db");
+const getDB = require('../utils/VerifTable')
 
-class task_organisation {
+module.exports = class task_organisation {
+  static createTask = async (
+    orgaInformationToUp = {
+      name: "",
+      category_event_ID,
+      Organisation_ID,
+      Datetime,
+      OuCa,
+    }
+  ) => {
+    try {
+      let taskObj = await task_organisation.modelNormilizer(
+        orgaInformationToUp,
+        true
+      );
+      if (taskObj.success == false) return taskObj;
 
-    /* créer une nouvelle task */
-    static createTask = async(orgaInformationToUp = {name : "", etat, category_event_ID, Organisation_ID, desc, Datetime, Where}) =>{
-        let taskObj = await task_organisation.modelNormilizer(orgaInformationToUp, true)
-        
-        if(taskObj[0] == false){
-            return taskObj
-        }
+      let taskID = await db("task_event").insert(taskObj, ["ID"]);
 
-        let category_event = await db('category_event')
-        .select('ID')
-        .where({ID : taskObj.category_event_ID})
+      return {
+        success: true,
+        data: {
+          id: taskID[0],
+          commentaire: "Tâche bien créée",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "CREATE TASK (backend/models/taskEvent.models.js) HAS ERROR :"
+      );
+      console.log(err);
 
-        if(category_event[0] == undefined){
-            console.log(6)
-            return [false, 401]
-        }
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  };
 
-        let Organisation = await db('Organisation')
-        .select('ID')
-        .where({ID : taskObj.Organisation_ID})
+  static async updateTask(
+    orgaInformationToUp = {
+      name: "",
+      category_event_ID,
+      Datetime,
+      OuCa,
+    },
+    condition = { ID }
+  ) {
+    try {
+      let taskObj = await task_organisation.modelNormilizer(
+        orgaInformationToUp
+      );
+      if (taskObj.success == false) return taskObj;
 
-        if(Organisation[0] == undefined){
-            console.log(7)
-            return [false, 401]
-        }
+      let taskId = await db("task_event")
+        .update(taskObj, ["ID"])
+        .where(condition);
 
+      return {
+        success: true,
+        data: {
+          id: taskId[0],
+          commentaire: "Tâche bien modifié.",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "UPDATE TASK (backend/models/taskEvent.models.js) HAS ERROR :"
+      );
+      console.log(err);
 
-        let IDTASK = await db("task_event").insert(taskObj, ['id'])
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  }
 
+  static async destroyTask(
+    condition = { ID, category_event_ID, Organisation_ID }
+  ) {
+    try {
+      condition = suppNotUsed(condition);
+      if (Object.keys(condition).length == 0)
         return {
-            success : true,
-            id : IDTASK[0]
-        }
+          success: false,
+          reason: "Certaines informations obligatoires sont manquantes.",
+          code: errorCode.NotAcceptable,
+        };
+
+      let taskSelect = await task_organisation.selectTask(condition);
+
+      if (taskSelect.success == false) return taskSelect;
+
+      let taskId = await db("task_event").where(condition).del(["ID"]);
+
+      return {
+        success: true,
+        data: {
+          id: taskId[0],
+          commentaire: "Tache bien détruite.",
+        },
+      };
+    } catch (err) {
+      console.log("DESTROY TASK (backend/models/taskEvent.models.js) HAS ERROR :");
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  }
+
+  static async selectTask(
+    condition = {
+      ID: undefined,
+      Organisation_ID: undefined,
+      category_event_ID: undefined,
+    }
+  ) {
+    try {
+      condition = suppNotUsed(condition);
+
+      let taskInfo = await db("task_event").select("*").where(condition);
+
+      if (taskInfo[0] == undefined)
+        return {
+          success: false,
+          reason: "Organisation introuvable.",
+          code: errorCode.NotFound,
+        };
+
+      return {
+        success: true,
+        data: {
+          tasks: taskInfo,
+        },
+      };
+    } catch (err) {
+      console.log(
+        "SELECT TASK (backend/models/taskEvent.models.js) HAS ERROR : "
+      );
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  }
+
+  static modelNormilizer = async (
+    info = {
+      name: undefined,
+      category_event_ID,
+      Organisation_ID,
+      Datetime,
+      OuCa,
+    },
+    obligatoire = false
+  ) => {
+    if (
+      obligatoire &&
+      (!info.name || !info.category_event_ID || !info.Organisation_ID)
+    ) {
+      return {
+        success: false,
+        reason: "Certaines informations obligatoires sont manquantes.",
+        code: errorCode.NotAcceptable,
+      };
     }
 
-    /*modification de la task de l'orga*/
-    static async updateTask (orgaInformationToUp = {name : "", etat : 0, category_event_ID, desc, Datetime, Where}, condition = {ID}) {
+    if (info.name && (info.name.length < 4 || info.name.length > 50))
+      return {
+        success: false,
+        reason: "Le nom ne doit pas être plus petit que 4 ou plus grand que 50.",
+        code: errorCode.NotAcceptable,
+      };
 
-        let taskObj = await task_organisation.modelNormilizer(orgaInformationToUp)
+    if (info.OuCa && info.OuCa.length > 250)
+      return {
+        success: false,
+        reason: "L'adresse ne doit pas être suppérieur à 250 caractère.",
+        code: errorCode.NotAcceptable,
+      };
 
-        if(taskObj[0] == false){
-            return taskObj
-        }
-
-        let category_event = await db('category_event')
-        .select('ID')
-        .where({ID : taskObj.category_event_ID})
-
-        if(category_event[0] == undefined){
-            console.log(8)
-            return [false, 401]
-        }
-
-        await db('task_event')
-        .update(taskObj)
-        .where(condition)
-        
-        return true
+    if (info.Datetime){
+        if(isNaN(parseInt(info.Datetime)))
+            return {
+                success: false,
+                reason: "La date n'est pas acceptable.",
+                code: errorCode.NotAcceptable,
+            };
     }
 
-    /*détruction de la task of orga*/
-    static async destroyTask (condition ={ID, category_event_ID, Agenda_ID}){
-        if(!condition.ID && !condition.category_event_ID && !condition.Agenda_ID){
-            return [false, 406]
-        }
-        condition = suppNotUsed(condition)
-        let objCo = {};
-
-        (condition.ID == undefined) ? '' : objCo.ID = condition.ID;
-        (condition.category_event_ID == undefined) ? '' : objCo.category_event_ID = condition.category_event_ID;
-        (condition.Agenda_ID == undefined) ? '' : objCo.Organisation_ID = condition.Agenda_ID;
-
-        let taskInfo = await task_organisation.selectTask(objCo)
-
-        if(taskInfo[0] == false){
-            return taskInfo
-        }
-
-        await db('task_event')
-        .where(objCo)
-        .del()
-
-        return true
+    if (info.category_event_ID) {
+        let cat = getDB("category_event", info.category_event_ID)
+        if (cat.success == false) return cat
     }
 
-    /* sélection d'un ou plusieurs task (task d'agenda| task de projet)*/
-    static async selectTask (condition = {ID : undefined, Organisation_ID : undefined, category_event_ID : undefined}){
-        let orgainfo;
-        if(condition.ID || condition.Organisation_ID || condition.category_event_ID){
-            condition = suppNotUsed(condition)
-            orgainfo = await db('task_event')
-            .select("*")
-            .where(condition)
-
-            orgainfo = orgainfo[0]
-        }else{
-            orgainfo = await db('task_event')
-            .select("*")
-        }
-
-        if(orgainfo == undefined){
-            return [false, 404]
-        }
-        
-        return orgainfo
+    if (info.Organisation_ID) {
+        let orga = getDB('organisation', info.Organisation_ID)
+        if (orga.success == false) return orga
     }
 
-    /* normalise la data */
-    static modelNormilizer = async (info = {name : "", etat : 0, category_event_ID, Organisation_ID, desc, Datetime, Where}, obligatoire = false) =>{
-        if(
-            (obligatoire == true && 
-                (info.name == "" || !info.category_event_ID || !info.Organisation_ID) || (info.etat < 0 && info.etat >= 2)
-            ) || (
-                (info.name && (info.name.length < 4 || info.name.length > 50)) || 
-                (info.desc && info.desc.length > 150) || 
-                (info.Where && info.Where.length > 250) ||
-                (info.Datetime && (isNaN(parseInt(info.Datetime))))
-            )
-        ){
-            return [false, 406]
-        }
-        if(info.Datetime){
-            info.Datetime = new Date(parseInt(info.Datetime))
-        }
-
-        info = suppNotUsed(info)
-
-        return info
-    }
-}
-
-function suppNotUsed(prop) {
-    for (const property in prop) {
-      if (!prop[property] && prop[property] !== 0) {
-        delete prop[property]
-      }
-    }
-    return prop
-}
-
-module.exports = task_organisation;
+    return suppNotUsed(info);
+  };
+};

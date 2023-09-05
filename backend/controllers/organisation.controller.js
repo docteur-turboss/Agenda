@@ -1,111 +1,122 @@
-const task_organisation = require("../models/taskEvent.models");
-const permission = require("../models/permission.models");
-let catchErr = require("../middlewares/catchAsyncErrors");
-let normaliseErr = require("../utils/errorNormaliser");
-let agenda = require("../models/organisation.models");
-const category = require("../models/category.models");
-let fs = require("fs");
+const taskModel = require("../models/taskEvent.models");
+const permissionModel = require("../models/permission.models");
+let agendaModel = require("../models/organisation.models");
+const categoryModel = require("../models/category.models");
+const { ErrorException, errorCode } = require("../models/error.models");
 
-/* Create Agenda */
-module.exports.creationAgenda = catchErr(async (req, res, next) => {
-  let agendaInfo = await agenda.createAgenda({
-    Nom: req.fields.Nom,
-    Type: req.fields.Type,
-    idOwner: req.UserID,
-  });
+module.exports.CreationAgenda = async (req, res, next) => {
+  try {
+    let agendaInfo = await agendaModel.createAgenda({
+      Nom: req.fields.Nom,
+      Type: req.fields.Type,
+      idOwner: req.UserID,
+    });
 
-  if (agendaInfo[0] == false) {
-    return res.status(agendaInfo[1]).json(normaliseErr(agendaInfo[1], agendaInfo[2]));
+    if (agendaInfo.success == false)
+      return next(new ErrorException(agendaInfo.code, agendaInfo.reason));
+
+    return res.status(201).json(agendaInfo);
+  } catch (err) {
+    console.log(
+      "CREATE AGENDA (backend/controllers/organisation.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
+};
 
-  return res.status(201).json({
-    status: true,
-    id : agendaInfo.id
-  });
-});
+module.exports.getAgenda = async (req, res, next) => {
+  try {
+    let orgaSelect = await agendaModel.selectAgenda({ ID: req.fields.OrganisationID });
 
-/* Détruire un agenda */
-module.exports.DeleteAgenda = catchErr(async (req, res, next) => {
-  let dataAgenda = await agenda.selectAgenda({ ID: req.fields.OrganisationID });
-  if (dataAgenda[0] == false) {
-    return res.status(dataAgenda[1]).json(normaliseErr(dataAgenda[1], dataAgenda[2]));
+    if (orgaSelect.success == false)
+      return next(new ErrorException(orgaSelect.code, orgaSelect.reason));
+
+    return res.status(200).json(orgaSelect);
+  } catch (err) {
+    console.log(
+      "SELECT AGENDA (backend/controllers/organisation.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
+};
 
-  let dataTask = await task_organisation.destroyTask({
-    Agenda_ID: req.fields.OrganisationID,
-  });
-  if (dataTask[0] == false && dataTask[1] !== 404) {
-    return res.status(dataTask[1]).json(normaliseErr(dataTask[1], dataTask[2]));
+module.exports.updateAgenda = async (req, res, next) => {
+  try {
+    if (!req.fields.Nom || !req.fields.OrganisationID)
+      return next(
+        new ErrorException(errorCode.NotAcceptable, "Aucun parametre entré")
+      );
+
+    let agendaInfo = await agendaModel.selectAgenda({ ID: req.fields.OrganisationID });
+    if (agendaInfo.selectAgenda == false)
+      return next(new ErrorException(agendaInfo.code, agendaInfo.reason));
+
+    let agendaData = await agendaModel.updateAgenda(
+      { Nom: req.fields.Nom },
+      { ID: req.fields.OrganisationID }
+    );
+
+    if (agendaData.success == false)
+      return next(new ErrorException(agendaData.code, agendaData.reason));
+
+    res.status(201).json(agendaData);
+  } catch (err) {
+    console.log(
+      "UPDATE AGENDA (backend/controllers/organisation.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
+};
 
-  let dataCategory = await category.destroyCategory({
-    agenda_ID: req.fields.OrganisationID,
-  });
+module.exports.DeleteAgenda = async (req, res, next) => {
+  try {
+    let dataAgenda = await agendaModel.selectAgenda({
+      ID: req.fields.OrganisationID,
+    });
 
-  if (dataCategory[0] == false && dataCategory[1] !== 404) {
-    return res.status(dataCategory[1]).json(normaliseErr(dataCategory[1], dataCategory[2]));
+    if (dataAgenda.success == false)
+      return next(new ErrorException(dataAgenda.code, dataAgenda.reason));
+
+    let dataTask = await taskModel.destroyTask({
+      Agenda_ID: req.fields.Organisation_ID,
+    });
+    if (dataTask.success == false && dataTask.code !== errorCode.NotFound)
+      return next(new ErrorException(dataTask.code, dataTask.reason));
+
+    let dataCategory = await categoryModel.destroyCategory({
+      Organisation_ID : req.fields.OrganisationID,
+    });
+    if (
+      dataCategory.success == false &&
+      dataCategory.code !== errorCode.NotFound
+    )
+      return next(new ErrorException(dataCategory.code, dataCategory.reason));
+
+      let dataPerm = await permissionModel.destroyPerm({
+      Organisation_ID: req.fields.OrganisationID,
+    });
+    if (dataPerm.success == false && dataPerm.code !== errorCode.NotFound)
+      return next(new ErrorException(dataPerm.code, dataPerm.reason));
+
+    let DestroyInfo = await agendaModel.destroyAgenda({
+      ID: req.fields.OrganisationID,
+    });
+    if (DestroyInfo.success == false)
+      return next(new ErrorException(DestroyInfo.code, DestroyInfo.reason));
+    
+    return res.status(200).json(DestroyInfo);
+  } catch (err) {
+    console.log(
+      "DESTROY AGENDA (backend/controllers/organisation.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
-
-  let dataPerm = await permission.destroyPerm({
-    Organisation_ID: req.fields.OrganisationID,
-  });
-
-  if (dataPerm[0] == false && dataPerm[1] !== 404) {
-    return res.status(dataPerm[1]).json(normaliseErr(dataPerm[1], dataPerm[2]));
-  }
-
-  let DestroyInfo = await agenda.destroyAgenda({
-    ID: req.fields.OrganisationID,
-  });
-
-  if (DestroyInfo[0] == false) {
-    return res.status(DestroyInfo[1]).json(normaliseErr(DestroyInfo[1], DestroyInfo[2]));
-  }
-
-  return res.status(200).json({
-    status: true,
-  });
-});
-
-/* Modification d'un agenda */
-module.exports.updateAgenda = catchErr(async (req, res, next) => {
-  if (!req.fields.Nom || !req.fields.ID) {
-    return res.status(406).json(normaliseErr(406, "No valid params names provided "));
-  }
-
-  let agendaInfo = await agenda.selectAgenda({ ID: req.fields.ID });
-  if (agendaInfo[0] == false) {
-    return res.status(agendaInfo[1]).json(normaliseErr(agendaInfo[1], agendaInfo[2]));
-  }
-
-  let agendaData = await agenda.updateAgenda(
-    { Nom: req.fields.Nom },
-    { ID: req.fields.ID }
-  );
-  if (agendaData[0] == false) {
-    return res.status(agendaData[1]).json(normaliseErr(agendaData[1], agendaData[2]));
-  }
-
-  res.status(201).json({
-    status: true,
-  });
-});
-
-/* Récupère les informations d'un agenda */
-module.exports.getAgenda = catchErr(async (req, res, next) => {
-  let agendaData;
-  if (req.fields.ID) {
-    agendaData = await agenda.selectAgenda({ ID: req.fields.ID });
-  } else {
-    agendaData = await agenda.selectAgenda();
-  }
-
-  if (agendaData[0] == false) {
-    return res.status(agendaData[1]).json(normaliseErr(agendaData[1], agendaData[2]));
-  }
-
-  res.status(200).json({
-    status: true,
-    data: agendaData,
-  });
-});
+};

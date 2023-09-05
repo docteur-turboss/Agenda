@@ -1,73 +1,78 @@
-const task_organisation = require("../models/taskEvent.models");
-let catchErr = require("../middlewares/catchAsyncErrors");
+const { ErrorException, errorCode } = require("../models/error.models");
 let categoryModel = require("../models/category.models");
-let normaliseErr = require("../utils/errorNormaliser");
+const taskModel = require("../models/taskEvent.models");
 
-module.exports.CreateCategory = catchErr(async (req, res, next) => {
-  let catInfo = await categoryModel.createCategory({
-    color: req.fields.color,
-    Name: req.fields.Name,
-    Organisation_ID: req.fields.OrganisationID,
-  });
+module.exports.CreateCategory = async (req, res, next) => {
+  try{
+    let catCreate = await categoryModel.createCategory({
+      color: req.fields.color,
+      Name: req.fields.Name,
+      Organisation_ID: req.fields.OrganisationID,
+    });
+   
+    if (catCreate.success == false) return next(new ErrorException(catCreate.code, catCreate.reason))
+  
+    return res.status(200).json(catCreate);
+  }catch(err){
+    console.log("CREATE CATEGORY (backend/controllers/category.controllers.js) HAS ERROR :")
+    console.log(err)
 
-  if (catInfo[0] == false) {
-    return res.status(catInfo[1]).json(normaliseErr(catInfo[1], catInfo[2]));
+    return next(new ErrorException())
   }
+};
 
-  return res.status(200).json({
-    status: true,
-    id : catInfo.id
-  });
-});
+module.exports.getCategory = async (req, res, next) => {
+  try{
+    let catSelect = await categoryModel.selectCategory({
+      Organisation_ID: req.fields.OrganisationID,
+    });
+  
+    if (catSelect.success == false) return next(new ErrorException(catSelect.code, catSelect.reason))
+  
+    return res.status(200).json(catSelect);
+  }catch(err){
+    console.log("GET CATEGORY (backend/controllers/category.controller.js) HAS ERROR :")
+    console.log(err)
 
-module.exports.SelectCategory = catchErr(async (req, res, next) => {
-  let catInfo = await categoryModel.selectCategory({
-    Organisation_ID: req.fields.OrganisationID,
-  });
-
-  if (catInfo[0] == false) {
-    return res.status(catInfo[1]).json(normaliseErr(catInfo[1], catInfo[2]));
+    return next(new ErrorException())
   }
+};
 
-  return res.status(200).json({
-    status: true,
-    data: catInfo,
-  });
-});
+module.exports.UpdateCategory = async (req, res, next) => {
+  try{
+    let catInfo = await categoryModel.updateCategory(
+      { color: req.fields.color, Name: req.fields.Name },
+      { OrganisationID: req.fields.OrganisationID, id : req.fields.Category_ID }
+    );
+  
+    if (catInfo.success == false) return next(new ErrorException(catInfo.code, catInfo.reason))
+  
+    return res.status(200).json(catInfo);
+  }catch(err){
+    console.log("UPDATE CATEGORY (backend/controllers/task.controller.js) HAS ERROR :")
+    console.log(err)
 
-module.exports.UpdateCategory = catchErr(async (req, res, next) => {
-  let catInfo = await categoryModel.updateCategory(
-    { color: req.fields.color, Name: req.fields.Name },
-    { OrganisationID: req.fields.OrganisationID, id : req.fields.Category_ID }
-  );
-
-  if (catInfo[0] == false) {
-    return res.status(catInfo[1]).json(normaliseErr(catInfo[1], catInfo[2]));
+    return next(new ErrorException())
   }
+};
 
-  return res.status(200).json({
-    status: true,
-  });
-});
+module.exports.DeleteCategory = async (req, res, next) => {
+  try{
+    let task = await taskModel.destroyTask({
+      category_event_ID: req.fields.Category_ID,
+    });
+    if (task.success == false && task.code !== errorCode.NotFound) return next(new ErrorException(task.code, task.reason))
 
-module.exports.DeleteCategory = catchErr(async (req, res, next) => {
-  let task = await task_organisation.destroyTask({
-    category_event_ID: req.fields.Category_ID,
-  });
+    let catInfo = await categoryModel.destroyCategory({
+      id: req.fields.Category_ID,
+    });
+    if (catInfo.success == false) return next(new ErrorException(catInfo.code, catInfo.reason))
 
-  if (task[0] == false && task[1] !== 404) {
-    return res.status(task[1]).json(normaliseErr(task[1], task[2]));
+    return res.status(200).json(catInfo);
+  }catch(err){
+    console.log("DESTROY CATEGORY (backend/controllers/task.controller.js) HAS ERROR :")
+    console.log(err)
+
+    return next(new ErrorException())
   }
-
-  let catInfo = await categoryModel.destroyCategory({
-    ID_Cat: req.fields.Category_ID,
-  });
-
-  if (catInfo[0] == false) {
-    return res.status(catInfo[1]).json(normaliseErr(catInfo[1], catInfo[2]));
-  }
-
-  return res.status(200).json({
-    status: true,
-  });
-});
+};

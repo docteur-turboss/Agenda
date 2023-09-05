@@ -1,136 +1,165 @@
-const db = require('../config/db')
+const { errorCode } = require("./error.models");
+const suppNotUsed = require("../utils/deleteParamsNotUsed");
+const db = require("../config/db");
+const getDB = require('../utils/VerifTable')
 
+module.exports = class permission {
+  static createPerm = async (
+    orgaInformationToUp = { User_ID, Organisation_ID, Permission }
+  ) => {
+    try {
+      let permObj = await permission.modelNormilizer(orgaInformationToUp);
+      if (permObj.success == false) return infoPerm;
 
-class permission {
+      let permID = await db("user_has_organisation").insert(permObj, ["ID"]);
 
-    /* créer une nouvelle perm */
-    static createPerm = async(orgaInformationToUp = {User_ID, Organisation_ID, Permission}) =>{
-        let info = await permission.modelNormilizer(orgaInformationToUp)
+      return {
+        success: true,
+        data: {
+          id: permID[0],
+          commentaire: "Permission bien créée",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "CREATE PERM (backend/models/permission.models.js) HAS ERROR :"
+      );
+      console.log(err);
 
-        if(info [0] == false){
-            return info
-        }
-
-        await db('user_has_organisation').insert(info)
-        
-        return true
+      return {
+        success: false,
+        code: codeE.UnknownError,
+      };
     }
+  };
 
-    /*modification d'une perm */
-    static async updatePerm (orgaInformationToUp = {Permission}, condition = {User_ID, Organisation_ID}) {
+  static async updatePerm(
+    orgaInformationToUp = { Permission },
+    condition = { User_ID, Organisation_ID }
+  ) {
+    try {
+      let permObj = await permission.modelNormilizer(
+        orgaInformationToUp,
+        condition
+      );
+      if (permObj.success == false) return permObj;
 
-        let info = await permission.modelNormilizer(orgaInformationToUp)
+      let permId = await db("user_has_organisation")
+        .update(permObj, ["ID"])
+        .where(condition);
 
-        if(info [0] == false){
-            return info
-        }
+      return {
+        success: true,
+        data: {
+          id: permId[0],
+          commentaire: "Permission bien modifié.",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "UPDATE PERM (backend/models/permission.models.js) HAS ERROR :"
+      );
+      console.log(err);
 
-        await db('user_has_organisation')
-        .update(info)
-        .where(condition)
-        
-        return true
+      return {
+        success: false,
+        code: codeE.UnknownError,
+      };
     }
+  }
 
-       
-
-    /*détruction d'une perm*/
-    static async destroyPerm (condition ={User_ID, Organisation_ID}){
-        if(!condition.Organisation_ID){
-            return [false, 406]
+  static async destroyPerm(condition = { User_ID, Organisation_ID }) {
+    try{
+        if (!condition.Organisation_ID) return {
+            success : false,
+            reason : "Certaines informations obligatoires sont manquantes.",
+            code : errorCode.NotAcceptable
         }
-
-        condition = suppNotUsed(condition)
-
-        let objDest = {
-            Organisation_ID : condition.Organisation_ID
+    
+        condition = suppNotUsed(condition);
+    
+        let permSelect = await permission.selectPerm(condition);
+    
+        if (permSelect.success == false) return permInfo;
+    
+        let permId = await db("user_has_organisation").where(condition).del(['ID']);
+    
+        return {
+            success : true,
+            data : {
+                id : permId[0],
+                commentaire : "Permission bien détruite."
+            }
         };
-        (condition.User_ID === undefined) ? "": objDest.User_ID = condition.User_ID;
+    }catch(err){
+        console.log("DESTROY PERMISSION (backend/models/permission.models.js) HAS ERROR :")
+        console.log(err)
 
-        
-        let permInfo = await permission.selectPerm(condition)
-
-        if(permInfo[0] == false){
-            return permInfo
+        return {
+            success : false,
+            code : errorCode.UnknownError
         }
-
-        await db('user_has_organisation')
-        .where(condition)
-        .del()
-
-        return true
     }
+  }
 
-    /* sélection d'une ou plusieurs perms selon l'user ou l'orga */
-    static async selectPerm (condition = {User_ID : undefined, Organisation_ID : undefined}){
-        let permInfo;
+  static async selectPerm(
+    condition = { User_ID: undefined, Organisation_ID: undefined }
+  ) {
+    try{
+        condition = suppNotUsed(condition);
 
-        condition = suppNotUsed(condition)
-        
-        if(!condition.User_ID && !condition.Organisation_ID){
-            return [false, 404]
-        }
-        
-        permInfo = await db('user_has_organisation')
+        let permInfo = await db("user_has_organisation")
         .select("Permission")
-        .where(condition)
+        .where(condition);
 
-        if(permInfo[0] == undefined)
-        {
-            return [false, 404]
+        if (permInfo[0] == undefined) {
+            return {
+                success : false,
+                reason : "Permission introuvable.",
+                code : errorCode.NotFound
+            }
         }
-        
-        return permInfo
+
+        return {
+            success : true,
+            data : {
+                perms : permInfo
+            }
+        };
+    }catch(err){
+        console.log(
+            "SELECT PERM (backend/models/permission.models.js) HAS ERROR : "
+          );
+          console.log(err);
+    
+          return {
+            success: false,
+            code: errorCode.UnknownError,
+          };
+    }
+  }
+
+  static modelNormilizer = async (
+    info = { User_ID, Organisation_ID, Permission },
+    obligatoire = false
+  ) => {
+    if (obligatoire == true || !info.Permission && (!info.User_ID || !info.Organisation_ID))
+        return {
+            success : false,
+            code : errorCode.NotAcceptable,
+            reason : "Certaines informations obligatoires sont manquantes."
+        };
+
+    if (info.User_ID) {
+      let user = getDB("user", info.User_ID);
+      if (user.success == false) return user;
     }
 
-    /* normalise la data */
-    static modelNormilizer = async (info = {User_ID, Organisation_ID, Permission}, obligatoire = false) =>{
-        if(obligatoire == true || !info.Permission){
-            if(!info.User_ID || !info.Organisation_ID || !info.Permission){
-                return [false, 406, "Certaines informations fournit sont manquantes."]
-            }
-        }
-        async function getDB(DBtable, params){
-            let orgainfo = await db(DBtable)
-            .select("ID")
-            .where({ID : params})
-
-            orgainfo = await orgainfo[0]
-
-            if(orgainfo == undefined){
-                return [false, 404, "L'organisme fournit n'est pas trouvable."]
-            }
-        }
-
-        if(info.User_ID){
-           let user = getDB('user', info.User_ID) 
-           if(user[0] == false){
-                return user
-           }
-        }
-        
-        if(info.Organisation_ID){
-            let orgo = getDB('organisation', info.Organisation_ID)
-            
-            if(orgo[0] == false){
-                return orgo
-            }
-        }
-        
-
-        info = suppNotUsed(info)
-
-        return info
+    if (info.Organisation_ID) {
+      let orgo = getDB("organisation", info.Organisation_ID);
+      if (orgo.success == false) return orgo;
     }
+
+    return suppNotUsed(info);
+  };
 }
-
-function suppNotUsed(prop) {
-    for (const property in prop) {
-      if (!prop[property]) {
-        delete prop[property]
-      }
-    }
-    return prop
-}
-
-module.exports = permission;

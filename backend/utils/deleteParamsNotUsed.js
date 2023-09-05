@@ -1,4 +1,4 @@
-function suppNotUsed(prop) {
+module.exports = suppNotUsed = (prop) => {
   for (const property in prop) {
     if (!prop[property]) {
       delete prop[property]
@@ -6,5 +6,3 @@ function suppNotUsed(prop) {
   }
   return prop
 }
-
-module.exports = suppNotUsed

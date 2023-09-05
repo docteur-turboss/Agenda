@@ -1,8 +1,9 @@
-const {CreateCategory,DeleteCategory,SelectCategory,UpdateCategory} = require('../controllers/category.controller')
-const {DeleteAgenda,creationAgenda,getAgenda,updateAgenda} = require('../controllers/organisation.controller')
-const {CreatePerm,DeletePerm,UpdatePerm} = require('../controllers/permission.controller')
+const {CreateCategory,DeleteCategory,getCategory,UpdateCategory} = require('../controllers/category.controller')
+const {DeleteAgenda,CreationAgenda,getAgenda,updateAgenda} = require('../controllers/organisation.controller')
 const {CreateTask,destroyTask,getTask,UpdateTask} = require('../controllers/task.controller')
 const {isAuthenticatedUser, hasPerm} = require('../middlewares/auth')
+const {limiterOrganisation, limiterTask, limiterCategory} = require('../middlewares/rate-limit')
+
 const express = require('express')
 
 const router = express.Router()
@@ -14,23 +15,21 @@ const router = express.Router()
 // .put(isAuthenticatedUser, hasPerm('manager'), UpdatePerm)
 
 router.route('/task')
+.post(limiterTask, isAuthenticatedUser, hasPerm( "manager"), CreateTask)
+.put(limiterTask, isAuthenticatedUser, hasPerm("manager"), UpdateTask)
 .delete(isAuthenticatedUser, hasPerm("manager"), destroyTask)
-.post(isAuthenticatedUser, hasPerm( "manager"), CreateTask)
-.put(isAuthenticatedUser, hasPerm("manager"), UpdateTask)
 .get(isAuthenticatedUser, hasPerm("viewer"), getTask)
 
 router.route('/category')
+.post(limiterCategory, isAuthenticatedUser, hasPerm("manager"), CreateCategory)
+.put(limiterCategory, isAuthenticatedUser, hasPerm("manager"), UpdateCategory)
 .delete(isAuthenticatedUser, hasPerm("manager"), DeleteCategory)
-.post(isAuthenticatedUser, hasPerm("manager"), CreateCategory)
-.get(isAuthenticatedUser, hasPerm("viewer"), SelectCategory)
-.put(isAuthenticatedUser, hasPerm("manager"), UpdateCategory)
+.get(isAuthenticatedUser, hasPerm("viewer"), getCategory)
 
 router.route('/main')
+.put(limiterOrganisation, isAuthenticatedUser, hasPerm('manager'), updateAgenda)
+.post(limiterOrganisation, isAuthenticatedUser, CreationAgenda)
 .delete(isAuthenticatedUser, hasPerm('manager'), DeleteAgenda)
-.put(isAuthenticatedUser, hasPerm('manager'), updateAgenda)
 .get(isAuthenticatedUser, hasPerm('viewer'), getAgenda)
-.post(isAuthenticatedUser, creationAgenda)
-
-
 
 module.exports = router

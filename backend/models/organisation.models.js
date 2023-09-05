@@ -1,109 +1,182 @@
-const permission = require('./permission.models')
-const db = require('../config/db')
-const suppNotUsed = require('../utils/deleteParamsNotUsed')
+const { errorCode } = require("./error.models");
+const suppNotUsed = require("../utils/deleteParamsNotUsed");
+const db = require("../config/db");
+const permission = require("./permission.models");
 
+module.exports = class Organisation {
+  static createAgenda = async (
+    orgaInformationToUp = { Nom, Type, idOwner }
+  ) => {
+    try {
+      let orgaObj = await Organisation.modelNormilizer(
+        orgaInformationToUp,
+        true
+      );
 
-class Organisation {
+      if (orgaObj.success == false) return orgaObj;
 
-    /* créer un nouvel agenda */
-    static createAgenda = async(orgaInformationToUp = {Nom, Type, idOwner}) =>{
-        let info = await Organisation.modelNormilizer(orgaInformationToUp, true)
+      let orgaId = await db("organisation").insert(
+        {
+          Nom: orgaObj.Nom,
+          type: orgaObj.Type,
+        },
+        ["ID"]
+      );
 
-        if(info[0] == false){
-            return info
-        }
+      let firstPerm = await permission.createPerm({
+        Organisation_ID: orgaId[0],
+        Permission: "manager",
+        User_ID: orgaInformationToUp.idOwner,
+      });
 
-        let IDOrga = await db("organisation").insert({
-            Nom : info.Nom,
-            type : info.Type
-        }, ["ID"])
+      if (firstPerm.success == false) {
+        return firstPerm;
+      }
 
-        let firstPerm = await permission.createPerm({Organisation_ID : IDOrga[0], Permission : "manager", User_ID: orgaInformationToUp.idOwner})
+      return {
+        success: true,
+        data: {
+          id: orgaId[0],
+          commentaire: "Agenda crée",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "CREATE ORGANISATION (backend/models/organisation.models.js) HAS ERROR :"
+      );
+      console.log(err);
 
-        if(firstPerm[0] == false){
-            return firstPerm
-        }
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  };
 
+  static async updateAgenda(orgaInformationToUp = { Nom }, condition = { ID }) {
+    try {
+      let OrgaInfo = await Organisation.modelNormilizer(orgaInformationToUp);
+
+      if (OrgaInfo.success == false) return OrgaInfo;
+
+      let orgaId = await db("organisation")
+        .update(OrgaInfo, ["ID"])
+        .where(condition);
+
+      return {
+        success: true,
+        data: {
+          id: orgaId[0],
+          commentaire: "Organisation bien modifié.",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "UPDATE ORGANISATION (backend/models/organisation.models.js) HAS ERROR :"
+      );
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
+    }
+  }
+
+  static async destroyAgenda(condition = { ID }) {
+    try {
+      if (condition.ID == undefined)
         return {
-            success : true,
-            id : IDOrga[0]
-        }
+          success: false,
+          reason: "Certaines informations obligatoires sont manquantes.",
+          code: errorCode.NotAcceptable,
+        };
+
+      let agendainfo = await Organisation.selectAgenda(condition);
+      if (agendainfo.success == false) return agendainfo;
+
+      let orgaId = await db("organisation").where(condition).del(["ID"]);
+
+      return {
+        success: true,
+        data: {
+          id: orgaId[0],
+          commentaire: "Agenda, catégorie et tâche bien détruit.",
+        },
+      };
+    } catch (err) {
+      console.log(
+        "DESTROY ORGANISATION (backend/models/organisation.models.js) HAS ERROR :"
+      );
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
     }
+  }
 
-    /*modification de l'organisation*/
-    static async updateAgenda (orgaInformationToUp = {Nom}, condition = {ID}) {
+  static async selectAgenda(condition = { ID: undefined }) {
+    try {
+      condition = suppNotUsed(condition);
 
-        let info = await Organisation.modelNormilizer(orgaInformationToUp)
+      let orgaInfo = await db("organisation").select("*").where(condition);
 
-        if(info[0] == false){
-            return info
-        }
-        
-        await db('organisation')
-        .update(info)
-        .where(condition)
-        
-        return true
+      if (orgaInfo[0] == undefined)
+        return {
+          success: false,
+          reason: "Organisation introuvable.",
+          code: errorCode.NotFound,
+        };
+      return {
+        success: true,
+        data: {
+          agenda: orgaInfo,
+        },
+      };
+    } catch (err) {
+      console.log(
+        "SELECT ORGANISATION (backend/models/organisation.models.js) HAS ERROR :"
+      );
+      console.log(err);
+
+      return {
+        success: false,
+        code: errorCode.UnknownError,
+      };
     }
+  }
 
-    /*détruction de l'organisation*/
-    static async destroyAgenda (condition ={ID}){
-        if(!condition.ID){
-            return [false, 406]
-        }
-        
-        let agendainfo = await Organisation.selectAgenda(condition);
+  /* normalise la data */
+  static modelNormilizer = async (
+    info = { Nom, Type: 0 },
+    obligatoire = false
+  ) => {
+    if (obligatoire == true && !info.Nom)
+      return {
+        success: false,
+        reason: "Certaines informations fournies sont manquantes.",
+        code: errorCode.NotAcceptable,
+      };
 
-        if(agendainfo[0] == false){
-            return agendainfo
-        }
+    if (info.Nom && 100 < info.Nom.length && info.Nom.length < 3)
+      return {
+        success: false,
+        reason:
+          "Le nom ne doit pas être suppérieur à 100 ou inférieur à 3 caractère.",
+        code: errorCode.NotAcceptable,
+      };
 
-        await db('organisation')
-        .where(condition)
-        .del()
+    if (info.Type && (info.Type < 0 || info.Type > 1))
+      return {
+        success: false,
+        reason:
+          "Merci d'éviter ce genre de manipulation. Soit agenda, soit projet, pas xyz.",
+        code: errorCode.NotAcceptable,
+      };
+    info = suppNotUsed(info);
 
-        return true
-    }
-
-    /* sélection d'un ou plusieurs organisation (agenda|projet)*/
-    static async selectAgenda (condition = {ID : undefined}){
-        let orgainfo;
-        if(condition.ID !== undefined){
-            orgainfo = await db('organisation')
-            .select("ID", "Nom", "type")
-            .where(condition)
-
-            orgainfo = await orgainfo[0]
-        }else{
-            orgainfo = await db('organisation')
-            .select("ID", "Nom", "type")
-        }
-
-        if(orgainfo == undefined){
-            return [false, 404]
-        }
-        
-        return orgainfo
-    }
-
-    /* normalise la data */
-    static modelNormilizer = async (info = {Nom, Type : 0}, obligatoire = false) =>{
-        if(obligatoire == true && !info.Nom){
-            return [false, 406, "Certaines information fournit sont manquantes."]
-        }
-
-        if(info.Nom && ( 100 < info.Nom.length && info.Nom.length < 3)){
-            return [false, 406, "Le nom est suppérieur à 100 ou inférieur à 3."]
-        }
-
-        if(info.Type && (info.Type < 0 || info.Type > 1)){
-            return [false, 406, "Merci d'éviter ce genre de manipulation. C'est soit agenda, soit projet, pas xyz."]
-        }
-
-        info = suppNotUsed(info)
-
-        return info
-    }
-}
-
-module.exports = Organisation;
+    return info;
+  };
+};

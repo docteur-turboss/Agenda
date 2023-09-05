@@ -7,13 +7,13 @@
 - Choses à fini : 
 
     - Lier le front et le back;
-    - Gérer la création d'évènement
-    - Lister les évènement correctement
-    - Améliorer l'ux et l'ui
+    - Gérer la création d'évènement;
+    - Lister les évènement correctement;
+    - Améliorer l'ux et l'ui;
 
 - Quelques idée déjà en tête : 
-    - filtrages des évènements
-    - gestions des permissions
+    - filtrages des évènements;
+    - gestions des permissions;
 
 
 ## Features
@@ -44,7 +44,6 @@ Avent utilise quelques library pour fonctionner correctement :
         - web-vitals
     - back :
         - bcryptjs (prod : pour chiffrer les mdp users)
-        - body-parser (prod ? : récuperer les données des forms, mais avec formidable je me demande si c'est encore utile)
         - cookie-parser : (prod : pour la gestion de cookies)
         - dotenv (pred : pour récurer les fichiers .env)
         - email-validator (prod : valider si c'est une email valide)
@@ -53,6 +52,7 @@ Avent utilise quelques library pour fonctionner correctement :
         - knex (prod : sql constructeur)
         - mysql2 (prod : discute souvent avec la db)
         - nodemailer (prod : bonne prise de tête avec les emails) 
+        - nodemon (dev : pour redémarrer le serveur pendant les modifications)
 
 ## Installation
 --- 
@@ -84,9 +84,17 @@ Créez le fichier .env qui contiendra :
     EMAIL_PASS=<la clé pour s'y connecté en tant qu'appli>
 ```
 
+Une fois ceci fait, (/!\ fait attention d'avoir entrer le nom de votre database vide.)
+
+puis aller dans votre le terminal et tapez :
+```sh
+    cd backend/
+    npm run createDB
+```
+
 ## Avancé du projet :
 ---
-Version du projet : 0.0.1
+Version du projet : 0.0.3
 - y.x.x = la version y du projet est fini
 - x.y.x = l'étape y est arrivé 
     - 0 : construction
