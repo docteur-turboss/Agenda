@@ -9,7 +9,7 @@ require('dotenv').config({path : './config/.env'});
 
 const app = express();
 
-app.use(cookieParser());
+app.use(cookieParser(process.env.SECRETCOOKIES));
 app.use(formidable);
 
 app.use("/api/v1/organisation", projet);

@@ -1,6 +1,6 @@
-const ErrorException = require('../models/error.models');
+const { ErrorException } = require('../models/error.models');
 
-module.exports = errorHandler = (err, req, res) =>{
+module.exports = (err, req, res, next) =>{
   if(err instanceof ErrorException){
     return res.status(err.status).json({
         status : false,

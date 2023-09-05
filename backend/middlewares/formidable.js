@@ -1,5 +1,6 @@
+const { ErrorException } = require('../models/error.models');
 const formidable = require('formidable')
-const path = require('path')
+const path = require('path');
 
 module.exports = (req, res, next) => {
   const form = formidable({
@@ -13,7 +14,10 @@ module.exports = (req, res, next) => {
 
   form.parse(req, (err, fields, files) => {
     if (err) {
-      return next({status : false, errMess : err });
+      console.log("FORMIDABLE (backend/middlewares/formidable.js) HAS ERROR :")
+      console.log(err)
+      
+      return next(new ErrorException());
     }
     
     req.fields = fields;
@@ -21,21 +25,3 @@ module.exports = (req, res, next) => {
     next();
   });
 };
-
-/*
-   form.on('field', function(field, value) {
-                console.log(field, value);
-                fields.push([field, value]);
-            })
-            .on ('fileBegin', function(name, file){
-              var fileType = file.type.split('/').pop();
-              if(fileType == 'jpg' || fileType == 'png' || fileType == 'jpeg' ){
-                  //rename the incoming file
-                  file.path = form.uploadDir + "/" + images_hash + '_' + image_count + '.' + fileType;
-                  //increment image counter for next possible incoming image
-                  ++image_count;
-              } else {
-                  console.log( 'incorrect file type: ' + fileType );
-              }
-          })
-*/

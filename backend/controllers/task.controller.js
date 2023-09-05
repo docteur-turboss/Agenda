@@ -1,85 +1,104 @@
-let catchErr = require("../middlewares/catchAsyncErrors");
+const { ErrorException, errorCode } = require("../models/error.models");
 let taskModel = require("../models/taskEvent.models");
 
-module.exports.getTask = catchErr(async (req, res, next) => {
-  if (
-    !req.fields.ID &&
-    !req.fields.OrganisationID &&
-    !req.fields.category_event_ID
-  ) {
-    return res.status(405).json(normaliseErr(405, "No valid params name provided"));
-  }
-
-  let task = await taskModel.selectTask({
-    ID: req.fields.ID,
-    Organisation_ID: req.fields.OrganisationID,
-    category_event_ID: req.fields.category_event_ID,
-  });
-
-  if (task[0] == false) {
-    return res.status(task[1]).json(normaliseErr(task[1], task[2]));
-  }
-  return res.status(200).json({
-    status: true,
-    data: task,
-  });
-});
-
-module.exports.CreateTask = catchErr(async (req, res, next) => {
-  let taskCreate = await taskModel.createTask({
-    name: req.fields.name,
-    etat: 0,
-    category_event_ID: req.fields.category_event_ID,
-    Organisation_ID: req.fields.OrganisationID,
-    desc: req.fields.desc,
-    Datetime: req.fields.Datetime,
-    OuCa: req.fields.OuCa,
-  });
-
-  if (taskCreate[0] == false) {
-    return res.status(taskCreate[1]).json(normaliseErr(taskCreate[1], taskCreate[2]));
-  }
-
-  return res.status(201).json({
-    status: true,
-    id: taskCreate.id
-  });
-});
-
-module.exports.UpdateTask = catchErr(async (req, res, next) => {
-  let taskUpdate = await taskModel.updateTask(
-    {
+module.exports.CreateTask = async (req, res, next) => {
+  try {
+    let taskCreate = await taskModel.createTask({
       name: req.fields.name,
-      etat: 0,
       category_event_ID: req.fields.category_event_ID,
-      desc: req.fields.desc,
+      Organisation_ID: req.fields.OrganisationID,
       Datetime: req.fields.Datetime,
       OuCa: req.fields.OuCa,
-    },
-    { ID: req.fields.ID_Task }
-  );
+    });
 
-  if (taskUpdate[0] == false) {
-    return res.status(taskUpdate[1]).json(normaliseErr(taskUpdate[1], taskUpdate[2]));
+    if (taskCreate.success == false)
+      return next(new ErrorException(taskCreate.code, taskCreate.reason));
+
+    return res.status(201).json(taskCreate);
+  } catch (err) {
+    console.log(
+      "CREATE TASK (backend/controllers/task.controllers.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
+};
 
-  return res.status(201).json({
-    status: true,
-  });
-});
+module.exports.getTask = async (req, res, next) => {
+  try {
+    if (
+      !req.fields.ID &&
+      !req.fields.OrganisationID &&
+      !req.fields.category_event_ID
+    )
+      return next(
+        new ErrorException(
+          errorCode.NotAcceptable,
+          "Aucune information n'a été fournit."
+        )
+      );
 
-module.exports.destroyTask = catchErr(async (req, res, next) => {
-  if (req.fields.ID == undefined) {
-    return res.status(405).json(normaliseErr(405, 'No valid params name provided'));
+    let taskSelect = await taskModel.selectTask({
+      ID: req.fields.ID,
+      Organisation_ID: req.fields.OrganisationID,
+      category_event_ID: req.fields.category_event_ID,
+    });
+
+    if (taskSelect.success == false)
+      return next(new ErrorException(taskSelect.code, taskSelect.reason));
+
+    return res.status(200).json(taskSelect);
+  } catch (err) {
+    console.log(
+      "GET TASK (backend/controllers/task.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
+};
 
-  let dest = await taskModel.destroyTask({ ID: req.fields.ID });
+module.exports.UpdateTask = async (req, res, next) => {
+  try {
+    let taskUpdate = await taskModel.updateTask(
+      {
+        name: req.fields.name,
+        category_event_ID: req.fields.category_event_ID,
+        Datetime: req.fields.Datetime,
+        OuCa: req.fields.OuCa,
+      },
+      { ID: req.fields.ID_Task }
+    );
 
-  if (dest[0] == false) {
-    return res.status(dest[1]).json(normaliseErr(dest[1], dest[2]));
+    if (taskUpdate.success == false)
+      return next(new ErrorException(taskUpdate.code, taskUpdate.reason));
+
+    return res.status(201).json(taskUpdate);
+  } catch (err) {
+    console.log(
+      "UPDATE TASK (backend/controllers/task.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
   }
+};
 
-  return res.status(200).json({
-    status: true,
-  });
-});
+module.exports.destroyTask = async (req, res, next) => {
+  try {
+    let dest = await taskModel.destroyTask({ ID: req.fields.ID });
+
+    if (dest.success == false)
+      return next(new ErrorException(dest.code, dest.reason));
+
+    return res.status(200).json(dest);
+  } catch (err) {
+    console.log(
+      "DESTROY TASK (backend/controllers/task.controller.js) HAS ERROR :"
+    );
+    console.log(err);
+
+    return next(new ErrorException());
+  }
+};
